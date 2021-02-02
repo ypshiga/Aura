@@ -1,8 +1,11 @@
 #!/usr/bin/env Rscript
 
-# This script uses a template script from Allan Just to prepare daily and hourly PM measurements from EPA data
-# The script then finds stations that have both daily and hourly data and plots statistics and maps for 2018
-# This combines previous code in import_PM_monitors.R and primary_PM_monitors.R
+# This script uses a template script from Allan Just to average daily NO2 measurements from EPA data to be used for model data copmarison for AURA project (PI Sajeeev Philip)
+
+# Downloaded daily EPA data from https://aqs.epa.gov/aqsweb/airdata/download_files.html#Daily
+# I simply manually clicked on links for 2005-2020 (accessed on 1-25-21)
+# For NO2, Ozone and HAPS (for HCHO)
+
 
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 # Libraries                                         ####
@@ -11,100 +14,48 @@
 suppressMessages(library(data.table))
 suppressMessages(library(fst))
 library(sf)
-# devtools::install_github("rushgeo/nngeo") # use for parallel calculation with unprojected coords
 library(nngeo)
 library(ggplot2)
-fig_dir = '/Users/yshiga/Documents/Research/MtSinai/Figures/'
+library(dplyr)
+library(lubridate)
+fig_dir = '/Users/yshiga/Documents/Research/AURA/Figures/'
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-# Open Measurement Data. Hourly, then daily                         ####
+# Open Measurement Daily Data.                        ####
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-
-# Hourly
-# to unzip the files, we have to temporarily change working directory (calling out to unzip on linux, got weird)
-storewd <- getwd()
-# change working directory to where the data live, open as data.table
-filepath <- "~/Documents/Research/MtSinai/Data/aqs_raw/hourly" # "data/aqs_raw/epa_daily"
-setwd(filepath)
-zipfiles <- list.files(pattern = "hourly.*\\.zip")
-# load 2018 data only 
-hourlydt <- rbindlist(lapply(zipfiles[4], function(x) fread(paste0("unzip -cq ", x)))) 
-
-
-# restore the working directory
-setwd(storewd)
-rm(zipfiles, filepath)
-
-# how big is the data
-paste("The loaded hourly PM measurement data table has dimensions", paste(dim(hourlydt), collapse = ",")) # 9009658,29 for 1998-2017
-# pryr::object_size(dailydt) #  1.8 GB
-
-hourlydt[, day := as.Date(`Date Local`)]
-
-# look at 2018 all sites in lower 48
-states_non_contig <- c("Alaska", "Hawaii","Puerto Rico")
-
-hourlydt <- hourlydt[!(`State Name` %in% states_non_contig) & day > as.Date("2017-12-31") & day < as.Date("2019-01-01"), ]
-paste("PM Hourly measurements table subset to 2018 has dimensions", paste(dim(hourlydt), collapse = ",")) # 1243560,30
-
 
 # Daily
-# to unzip the files, we have to temporarily change working directory (calling out to unzip on linux, got weird)
 storewd <- getwd()
-# change working directory to where the data live, open as data.table
-filepath <- "~/Documents/Research/MtSinai/Data/aqs_raw/hourly" # "data/aqs_raw/epa_daily"
+# change working directory to where the data live
+filepath <- "~/Documents/Research/AURA/Data/Daily/NO2" # "data/aqs_raw/epa_daily"
 setwd(filepath)
+#list of data in folder
 zipfiles <- list.files(pattern = "daily.*\\.zip")
-dailydt <- rbindlist(lapply(zipfiles[4], function(x) fread(paste0("unzip -cq ", x))))
+# Load all daily data in folder in list
+dailydt <- rbindlist(lapply(zipfiles, function(x) fread(cmd=paste0("unzip -cq ", x))))
 
 # restore the working directory
 setwd(storewd)
+#clean up
 rm(zipfiles, filepath)
 
 # how big is the data
 paste("The loaded daily PM measurement data table has dimensions", paste(dim(dailydt), collapse = ",")) 
-# pryr::object_size(dailydt) #  1.8 GB
+# pryr::object_size(dailydt) #  For NO2 = 425 MB
 
 # clean the day
 dailydt[, day := as.Date(`Date Local`)]
 
-# look at 2018 all sites
-dailydt <- dailydt[!(`State Name` %in% states_non_contig) & day > as.Date("2017-12-31") & day < as.Date("2019-01-01"), ]
-paste("PM Daily measurements table subset to 2018 has dimensions", paste(dim(dailydt), collapse = ",")) # 1243560,30
+# 
+# # look at 2018 all sites
+# dailydt <- dailydt[!(`State Name` %in% states_non_contig) & day > as.Date("2017-12-31") & day < as.Date("2019-01-01"), ]
+# paste("PM Daily measurements table subset to 2018 has dimensions", paste(dim(dailydt), collapse = ",")) # 1243560,30
 
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-# Variable construction. Hourly, then daily                        ####
+# Variable construction. 
+# Create unique station identifier
+# Pull Land Use and Location Setting info from aqs_sites.cvs (from EPA) ####
+# Downloaded aqs_sites.zip from https://aqs.epa.gov/aqsweb/airdata/download_files.html#Meta
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-
-# Hourly
-# create a unique station identifier with uniform length
-hourlydt[, stn := paste0(
-  stringr::str_pad(`State Code`, 2, "left", pad = "0"), # two digit for state
-  stringr::str_pad(`County Code`, 3, "left", pad = "0"),# three digits for county
-  stringr::str_pad(`Site Num`, 4, "left", pad = "0"))]  # four digits site
-
-# rename the main parameter
-setnames(hourlydt, "Sample Measurement", "pm25")
-
-# calculate daily std, range and mean
-hourlydt[, daily_std := sd(pm25), by = .(stn, day)]
-hourlydt[, daily_range := diff(range(pm25)), by = .(stn, day)]
-hourlydt[, daily_mean := mean(pm25), by = .(stn, day)]
-hourlydt[, daily_max := max(pm25), by = .(stn, day)]
-
-# Open site description file
-sites <- fread("~/Documents/Research/MtSinai/Data/monitors/epa_monitor_descriptions/aqs_sites.csv")
-
-# In site table, create a unique station identifier with uniform length
-sites[, stn := paste0(
-  stringr::str_pad(`State Code`, 2, "left", pad = "0"), # two digit for state
-  stringr::str_pad(`County Code`, 3, "left", pad = "0"),# three digits for county
-  stringr::str_pad(`Site Number`, 4, "left", pad = "0"))]  # four digits site
-
-# Join Land Use and Location Setting fields to the daily measurements
-setkey(hourlydt, stn)
-setkey(sites, stn)
-hourlydt[sites, c("Land_Use", "Location_Setting") := .(`Land Use`, `Location Setting`)]
-rm(sites)
 
 # Daily
 # create a unique station identifier with uniform length
@@ -114,10 +65,10 @@ dailydt[, stn := paste0(
   stringr::str_pad(`Site Num`, 4, "left", pad = "0"))]  # four digits site
 
 # rename the main parameter
-setnames(dailydt, "Arithmetic Mean", "pm25")
+# setnames(dailydt, "Arithmetic Mean", "NO2")
 
 # Open site description file
-sites <- fread("~/Documents/Research/MtSinai/Data/monitors/epa_monitor_descriptions/aqs_sites.csv")
+sites <- fread("~/Documents/Research/AURA/Data/Daily/aqs_sites.csv")
 
 # In site table, create a unique station identifier with uniform length
 sites[, stn := paste0(
@@ -131,84 +82,10 @@ setkey(sites, stn)
 dailydt[sites, c("Land_Use", "Location_Setting") := .(`Land Use`, `Location Setting`)]
 rm(sites)
 
-
-# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-# Selecting a single measurement per station & day  ####
-# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-
-# often have >1 obs per station per day
-# we want to get to one (valid) observation per station per day
-# dailydt[, .N, by = c("stn", "day")][, table(N)]
-# three reasons: 
-# 1. redundant records with different sample duration (1 HOUR and 24 HR BLK)
-# 2. event type flagged rows coded redundantly
-# 3. multiple instruments (POC)
-
-# 1: restrict to 24 hour measures (the 1 HOUR measures are for a different analysis)
-dailydt <- dailydt[`Sample Duration` %in% "24 HOUR",]
-#dailydt <- dailydt[`Sample Duration` %in% c("24 HOUR", "24-HR BLK AVG"),]
-paste("PM measurements table subset to 24 hour samples has dimensions", paste(dim(dailydt), collapse = ",")) # 907098,33
-
-# 2: create a field of whether there was an included and or excluded event type for every day
-setkey(dailydt, stn, day, POC, `Event Type`)
-# takes ~ 54 seconds
-dailydt[unique(dailydt[`Event Type` != "None", .(stn, day, POC)]), 
-        eventflag := .SD[`Event Type` != "None", paste0(`Event Type`, collapse = ",")], 
-        by = c("stn", "day", "POC")]
-# dailydt[, table(eventflag)]    # Excluded,Included: 21;  Included: 6769
-# drop the data if it was a weird Event Type (duplicates)
-dailydt <- dailydt[`Event Type` == "None", ]
-paste("PM measurements table subset Event Type == None has dimensions", paste(dim(dailydt), collapse = ",")) # 900673,34
-
-
-# 3: Select preferred measurement when multiple instruments are reporting that day
-
-# Load the EPA monitor description file, which includes a flag for NAAQS Primary Monitor
-monitors <- fread("~/Documents/Research/MtSinai/Data/monitors/epa_monitor_descriptions/aqs_monitors.csv")
-# dim(monitors) # 349505, 30
-
-# In monitor table, create a unique station identifier with uniform length
-monitors[, stn := paste0(
-  stringr::str_pad(`State Code`, 2, "left", pad = "0"), # two digit for state
-  stringr::str_pad(`County Code`, 3, "left", pad = "0"),# three digits for county
-  stringr::str_pad(`Site Number`, 4, "left", pad = "0"))]  # four digits site
-
-# Subset monitors to NEMIA, dates since 2000, PM measurements
-# monitors <- monitors[`State Name` %in% nemiastates & `Parameter Code` %in% c(88101, 88502) & 
-#                     `Last Sample Date` >= as.Date("2000-01-01"), ]
-monitors <- monitors[`Parameter Code` %in% c(88101, 88502) & 
-                       `Last Sample Date` >= as.Date("2017-12-31"), ]
-
-# Note that 44% of these stations do not have a primary monitor assigned
-# prop.table(table(monitors[, .(has_primary = any(`NAAQS Primary Monitor` == "Y")), by = .(stn)][,has_primary]))
-
-# Join the primary monitor flag to the daily measurements
-setkey(dailydt, stn, `Parameter Code`, POC)
-setkey(monitors, stn, `Parameter Code`, POC)
-dailydt[monitors, NAAQS_Primary := `NAAQS Primary Monitor`]
-
-# While we have the monitor table handy, copy the Monitoring Objective column
-dailydt[monitors, Monitoring_Objective := `Monitoring Objective`]
-
-# 3a: select the measurement from a Primary Monitor when it is available
-dailydt[, day_has_primary := any(NAAQS_Primary == "Y"), by = .(stn, day)]
-dailybest <- dailydt[`NAAQS_Primary` == "Y", ]
-
-# 3b: when a Primary Monitor is not available, prefer measurements in the following priority:
-#  Parameter Code 88101 over 88502, Sample Duration of "24 HOUR" over "24 HOUR AVG", and the lowest number of POC
-setkey(dailydt, stn, day, `Parameter Code`, `Sample Duration`, POC)
-dailybest_3b <- dailydt[unique(dailydt[day_has_primary == FALSE, .(stn, day)]), ,mult = "first"]
-
-# combine the two steps to form the best daily measurement table
-dailybest = rbind(dailybest, dailybest_3b)
-paste("PM measurements table after selecting best daily measurement has dimensions", paste(dim(dailybest), collapse = ",")) # 702571,37
-rm(dailybest_3b, dailydt)
-
-# Note, a station 401359021 outside of NEMIA had two monitors marked as primary that reported at the same time, and the above filters would not remove such duplicates
-
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 # Fixing Inconsistent Datums. Hourly, then Daily      ####
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+# 
 
 # general function for converting CRS
 toEPSG <- function(x,y, from_epsg, to_epsg){ 
@@ -216,62 +93,66 @@ toEPSG <- function(x,y, from_epsg, to_epsg){
   toPoint = st_transform(fromPoint, crs = to_epsg)
   return(toPoint[[1]])}
 
-# Hourly
-
+#
 # Transform coordinates to WGS84 where the Datum is known
-uniquelonglatdatum <- unique(hourlydt[, .(Longitude, Latitude, Datum)])
+uniquelonglatdatum <- unique(dailydt[, .(Longitude, Latitude, Datum)])
 uniquelonglatdatum[Datum == "NAD27", datum_epsg := 4267]
 uniquelonglatdatum[Datum == "NAD83", datum_epsg := 4269]
 uniquelonglatdatum[Datum == "WGS84", datum_epsg := 4326]
-uniquelonglatdatum[Datum %in% c("NAD27", "NAD83"), 
-                   c("long_wgs84", "lat_wgs84"):= as.data.table(t(mapply(Longitude, Latitude, 
+uniquelonglatdatum[Datum %in% c("NAD27", "NAD83"),
+                   c("long_wgs84", "lat_wgs84"):= as.data.table(t(mapply(Longitude, Latitude,
                                                                          from_epsg = datum_epsg, to_epsg = 4326, FUN = toEPSG)))]
 # Merge these unique transformed coords back to measurement table
-setkey(hourlydt, Longitude, Latitude, Datum)
+setkey(dailydt, Longitude, Latitude, Datum)
 setkey(uniquelonglatdatum, Longitude, Latitude, Datum)
-hourlydt[uniquelonglatdatum, c("long_wgs84", "lat_wgs84") := list(long_wgs84, lat_wgs84)]
-# if WGS84 was original Datum, copy the coords to the _wgs84 columns
-hourlydt[Datum == "WGS84", c("long_wgs84", "lat_wgs84") := list(Longitude, Latitude)]
+dailydt[uniquelonglatdatum, c("long_wgs84", "lat_wgs84") := list(long_wgs84, lat_wgs84)]
+# # if WGS84 was original Datum, copy the coords to the _wgs84 columns
+dailydt[Datum == "WGS84", c("long_wgs84", "lat_wgs84") := list(Longitude, Latitude)]
 rm(uniquelonglatdatum)
 
 # Number of stations with UNKNOWN Datums (9)
-# dailybest[Datum == "UNKNOWN", uniqueN(stn)] 
+dailydt[Datum == "UNKNOWN", uniqueN(stn)]
 # How many of these stations sometimes did have a known datum? (0)
-# dailybest[stn %in% dailybest[Datum == "UNKNOWN", unique(stn)] & Datum != "UNKNOWN" ]
-# In previous testing, there were some stations outside NEMIA that had both UNKNOWN and known records, 
-#  and for 29/30 of those stations, the UNKNOWNs were actually NAD27
+dailydt[stn %in% dailydt[Datum == "UNKNOWN", unique(stn)] & Datum != "UNKNOWN" ]
+# Zero "unknown" for NO2
 
 # Assume UNKNOWN datums are WGS84. Assuming being the error is low if datum is incorrect
-hourlydt[Datum == "UNKNOWN", c("long_wgs84", "lat_wgs84") := list(Longitude, Latitude)]
+# dailydt[Datum == "UNKNOWN", c("long_wgs84", "lat_wgs84") := list(Longitude, Latitude)]
 
-# Daily
+#
+# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+# Monthly averages by unique station number      ####
+# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+# 
+# 
+# create "month" columns in list for monthly average - a placeholder setting date first day of given month
+dailydt[, month := floor_date(as_date(dailydt$`Date Local`), "month")]
 
-# Transform coordinates to WGS84 where the Datum is known
-uniquelonglatdatum <- unique(dailybest[, .(Longitude, Latitude, Datum)])
-uniquelonglatdatum[Datum == "NAD27", datum_epsg := 4267]
-uniquelonglatdatum[Datum == "NAD83", datum_epsg := 4269]
-uniquelonglatdatum[Datum == "WGS84", datum_epsg := 4326]
-uniquelonglatdatum[Datum %in% c("NAD27", "NAD83"), 
-                   c("long_wgs84", "lat_wgs84"):= as.data.table(t(mapply(Longitude, Latitude, 
-                                                                         from_epsg = datum_epsg, to_epsg = 4326, FUN = toEPSG)))]
-# Merge these unique transformed coords back to measurement table
-setkey(dailybest, Longitude, Latitude, Datum)
-setkey(uniquelonglatdatum, Longitude, Latitude, Datum)
-dailybest[uniquelonglatdatum, c("long_wgs84", "lat_wgs84") := list(long_wgs84, lat_wgs84)]
-# if WGS84 was original Datum, copy the coords to the _wgs84 columns
-dailybest[Datum == "WGS84", c("long_wgs84", "lat_wgs84") := list(Longitude, Latitude)]
-rm(uniquelonglatdatum)
+# tried other ways to average but didn't use these
+# df_month <- data.frame(Date=floor_date(as_date(dailydt$`Date Local`), "month"))
+# monthlydt <- aggregate(dailydt$`Arithmetic Mean`,list(format(dailydt$day, "%Y-%m"),dailydt$`Site Num`),mean)
 
-# Number of stations with UNKNOWN Datums (9)
-# dailybest[Datum == "UNKNOWN", uniqueN(stn)] 
-# How many of these stations sometimes did have a known datum? (0)
-# dailybest[stn %in% dailybest[Datum == "UNKNOWN", unique(stn)] & Datum != "UNKNOWN" ]
-# In previous testing, there were some stations outside NEMIA that had both UNKNOWN and known records, 
-#  and for 29/30 of those stations, the UNKNOWNs were actually NAD27
+# create new variable by averaging all daily obs in a month for a unique station
+dailydt[,monthly_mean := mean(`Arithmetic Mean`, na.rm=T), .(stn, month)]
 
-# Assume UNKNOWN datums are WGS84. Assuming being the error is low if datum is incorrect
-dailybest[Datum == "UNKNOWN", c("long_wgs84", "lat_wgs84") := list(Longitude, Latitude)]
+# remove duplicates and create new data frame with mothly average data
+monthlydt <- dailydt[!duplicated(dailydt[,31:37])]
 
+# plot number of sites with monthly average data per month over time
+# use number/count of "month" to indicate unique sites 
+ggplot(monthlydt) + aes(x=month) + geom_bar() + labs(x='Time [month]',y='Number of EPA sites with NO2 obs')
+ggsave(paste0(fig_dir,"EPA_NO2_n_monthly_obs.png"), width = 6, height = 3.5)
+
+#plot mean, min, max of monthly average data per month across all sites over time
+monthlydt %>% group_by(month) %>%
+  summarise(min = min(`Arithmetic Mean`, na.rm = TRUE),
+            max = max(`Arithmetic Mean`, na.rm = TRUE),
+            avg = mean(`Arithmetic Mean`,na.rm = TRUE)) %>%
+  gather(metric, value, -month) %>%
+  ggplot(.,aes(x = month, y = value, 
+               group = metric, color = metric)) + labs(x='Time [month]',y='Monthly average NO2 [ppb]') +
+  geom_line()
+ggsave(paste0(fig_dir,"Ave_min_max_NO2_monthly.png"), width = 6, height = 3.5)
 
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 # Output                                            ####

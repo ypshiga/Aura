@@ -19,7 +19,8 @@ library(lubridate)
 library(zoo)
 library(seas)
 library(R.matlab)
-
+library(sp)
+library(rgeos)
 fig_dir = '/Users/yshiga/Documents/Research/AURA/Figures/'
 
 

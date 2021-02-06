@@ -7,9 +7,7 @@
 # For NO2, Ozone and HAPS (for HCHO)
 
 
-# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-# Libraries                                         ####
-# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+# Libraries ---------------------------------------------------------------
 
 suppressMessages(library(data.table))
 suppressMessages(library(fst))
@@ -20,10 +18,12 @@ library(dplyr)
 library(lubridate)
 library(zoo)
 library(seas)
+library(R.matlab)
+
 fig_dir = '/Users/yshiga/Documents/Research/AURA/Figures/'
-# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-# Open Measurement Daily Data.                        ####
-# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+
+# Open Measurement Daily Data ---------------------------------------------
 
 # Daily
 storewd <- getwd()
@@ -126,7 +126,7 @@ dailydt[stn %in% dailydt[Datum == "UNKNOWN", unique(stn)] & Datum != "UNKNOWN" ]
 # Monthly averages by unique station number      ####
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 # 
-# Create df for seasonal calculations
+# Create df for seasonal calculations from daily data
 seasonaldt <- dailydt[,1:35]
 
 # create "month" columns in list for monthly average - a placeholder setting date first day of given month
@@ -142,36 +142,56 @@ dailydt[,monthly_mean := mean(`Arithmetic Mean`, na.rm=T), .(stn, month)]
 # remove duplicates and create new data frame with mothly average data
 monthlydt <- dailydt[!duplicated(dailydt[,31:37])]
 
-# creat a year variable
+# creat a year variable in seasonal data frame
 seasonaldt$year <- format(seasonaldt$day,"%Y")
 
-# create a season variable
+# create a season variable in seasonal data frame
 seasonaldt$seas <- mkseas(x = seasonaldt$day,width='DJF')
 
-# seasonal mean using daily data
-seasonaldt[,seas_mean_daily := mean(`Arithmetic Mean`, na.rm=T), .(stn, seas, year)]
+# seasonal mean using daily data - take average by season and year and station
+seasonaldt[,seas_mean := mean(`Arithmetic Mean`, na.rm=T), .(stn, seas, year)]
 
-#remove duplicates
+#remove duplicates so only seasonal average remain
 seasonaldt<- seasonaldt[!duplicated(seasonaldt[,31:38])]
 
-# seasonal mean using monthly averages
+# seasonal mean using monthly averages copy monthly data frame
 seasonaldt_month <-monthlydt
 
-# creat a year variable
+# creat a year variable for seasonal data frame
 seasonaldt_month$year <- format(seasonaldt_month$day,"%Y")
 
-# create a season variable
+# create a season variable for seasonal data frame
 seasonaldt_month$seas <- mkseas(x = seasonaldt_month$day,width='DJF')
 
-# seasonal mean using daily data
-seasonaldt_month[,seas_mean_daily := mean(`monthly_mean`, na.rm=T), .(stn, seas, year)]
+# seasonal mean using monthly mean -  averaging by season and year and station
+seasonaldt_month[,seas_mean := mean(`monthly_mean`, na.rm=T), .(stn, seas, year)]
 
+# remove monthly mean variable and month variable
 seasonaldt_month[,36:37]<-NULL
+
+# remove duplicates so only seasonal averages remain
 seasonaldt_month_unique <- seasonaldt_month[!duplicated(seasonaldt_month[,31:38])]
 
+# remove data frame with duplicates
+rm(seasonaldt_month)
+
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-# Initial Plots                                     ####
+# Initial Plots of Data                                     ####
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+# plot to check differences between seasonal mean using daily data vs monthly average
+ggplot() +
+  geom_point(aes(x=seasonaldt$seas_mean,y=seasonaldt_month_unique$seas_mean),alpha = .6) + 
+  labs(x='Daily data',y='Monthly Averages') +
+  ggtitle("Seasonal Means of NO2 using Daily data vs Monthly averages")
+ggsave(paste0(fig_dir,"Daily_vs_Monthly_seasonal_averages.png"), width = 6, height = 3.5)
+
+ggplot() +
+  geom_point(aes(x=seasonaldt$seas_mean[seasonaldt_month_unique$seas=='JJA'],y=seasonaldt_month_unique$seas_mean[seasonaldt_month_unique$seas=='JJA']),alpha = .6) + 
+  labs(x='Daily data',y='Monthly Averages') +
+  ggtitle("Summer Means of NO2 using Daily data vs Monthly averages")
+ggsave(paste0(fig_dir,"Daily_vs_Monthly_seasonal_JJA_averages.png"), width = 6, height = 3.5)
+
 
 # plot number of sites with monthly average data per month over time
 # use number/count of "month" to indicate unique sites 
@@ -189,7 +209,9 @@ monthlydt %>% group_by(month) %>%
   geom_line()
 ggsave(paste0(fig_dir,"Ave_min_max_NO2_monthly.png"), width = 6, height = 3.5)
 
+# Load Model data 
 
+OMI_NO2 <- readMat("/Users/yshiga/Documents/Research/AURA/Data/Model_output/aura_omi_L3_no2_01_v2.mat")
 
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~

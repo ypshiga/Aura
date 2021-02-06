@@ -18,6 +18,8 @@ library(nngeo)
 library(ggplot2)
 library(dplyr)
 library(lubridate)
+library(zoo)
+library(seas)
 fig_dir = '/Users/yshiga/Documents/Research/AURA/Figures/'
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 # Open Measurement Daily Data.                        ####
@@ -124,7 +126,9 @@ dailydt[stn %in% dailydt[Datum == "UNKNOWN", unique(stn)] & Datum != "UNKNOWN" ]
 # Monthly averages by unique station number      ####
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 # 
-# 
+# Create df for seasonal calculations
+seasonaldt <- dailydt[,1:35]
+
 # create "month" columns in list for monthly average - a placeholder setting date first day of given month
 dailydt[, month := floor_date(as_date(dailydt$`Date Local`), "month")]
 
@@ -138,6 +142,32 @@ dailydt[,monthly_mean := mean(`Arithmetic Mean`, na.rm=T), .(stn, month)]
 # remove duplicates and create new data frame with mothly average data
 monthlydt <- dailydt[!duplicated(dailydt[,31:37])]
 
+# creat a year variable
+seasonaldt$year <- format(seasonaldt$day,"%Y")
+
+# create a season variable
+seasonaldt$seas <- mkseas(x = seasonaldt$day,width='DJF')
+
+# seasonal mean using daily data
+seasonaldt[,seas_mean_daily := mean(`Arithmetic Mean`, na.rm=T), .(stn, seas, year)]
+
+#remove duplicates
+seasonaldt<- seasonaldt[!duplicated(seasonaldt[,31:38])]
+
+# seasonal mean using monthly averages
+seasonaldt_month <-monthlydt
+
+# creat a year variable
+seasonaldt_month$year <- format(seasonaldt_month$day,"%Y")
+
+# create a season variable
+seasonaldt_month$seas <- mkseas(x = seasonaldt_month$day,width='DJF')
+
+# seasonal mean using daily data
+seasonaldt_month[,seas_mean_daily := mean(`monthly_mean`, na.rm=T), .(stn, seas, year)]
+
+seasonaldt_month[,36:37]<-NULL
+seasonaldt_month_unique <- seasonaldt_month[!duplicated(seasonaldt_month[,31:38])]
 
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 # Initial Plots                                     ####

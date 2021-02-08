@@ -178,8 +178,23 @@ seasonaldt_month_unique <- seasonaldt_month[!duplicated(seasonaldt_month[,31:38]
 # remove data frame with duplicates
 rm(seasonaldt_month)
 
+
+summer_seasonldt <-seasonaldt[which(seasonaldt$seas == 'JJA'),]
+summer_daily_mean_all <- summer_seasonldt[,c("stn","year","seas_mean")]
+
+write.csv(summer_daily_mean_all,'~/Documents/Research/AURA/Data/Model_output/summer_daily_mean_all.csv')
+
+
+summer_seasonl_mon <-seasonaldt_month_unique[which(seasonaldt_month_unique$seas == 'JJA'),]
+summer_month_mean_all <- summer_seasonl_mon[,c("stn","year","seas_mean")]
+
+write.csv(summer_month_mean_all,'~/Documents/Research/AURA/Data/Model_output/summer_month_mean_all.csv')
+
 #create data frame of the lat lon for each unique site (stn)
 lat_lon_EPA_site <- unique(seasonaldt[,.(Latitude,Longitude,stn)])
+
+
+write.csv(lat_lon_EPA_site,'~/Documents/Research/AURA/Data/Model_output/lat_lon_EPA_site.csv')
 
 # average lat lon to nearest grid of OMI model (.05 degree) 
 
@@ -220,7 +235,8 @@ monthlydt %>% group_by(month) %>%
 ggsave(paste0(fig_dir,"Ave_min_max_NO2_monthly.png"), width = 6, height = 3.5)
 
 # Load OMI Model data 
-OMI_NO2 <- readMat("/Users/yshiga/Documents/Research/AURA/Data/Model_output/aura_omi_L3_no2_01_v2.mat")
+#OMI_NO2 <- readMat("/Users/yshiga/Documents/Research/AURA/Data/Model_output/aura_omi_L3_no2_01_v2.mat")
+OMI_NO2_EPA <- readMat("/Users/yshiga/Documents/Research/AURA/Data/Model_output/data_EPA.mat")
 
 # Will need to find closest OMI Lat Lon for each EPA data site
 

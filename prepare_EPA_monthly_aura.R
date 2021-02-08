@@ -21,15 +21,17 @@ library(seas)
 library(R.matlab)
 library(sp)
 library(rgeos)
+
 fig_dir = '/Users/yshiga/Documents/Research/AURA/Figures/'
 
+data_dir = "~/Documents/Research/AURA/Data/Daily/NO2"
 
 # Open Measurement Daily Data ---------------------------------------------
 
 # Daily
 storewd <- getwd()
 # change working directory to where the data live
-filepath <- "~/Documents/Research/AURA/Data/Daily/NO2" # "data/aqs_raw/epa_daily"
+filepath <- data_dir # "data/aqs_raw/epa_daily"
 setwd(filepath)
 #list of data in folder
 zipfiles <- list.files(pattern = "daily.*\\.zip")
@@ -176,6 +178,13 @@ seasonaldt_month_unique <- seasonaldt_month[!duplicated(seasonaldt_month[,31:38]
 # remove data frame with duplicates
 rm(seasonaldt_month)
 
+#create data frame of the lat lon for each unique site (stn)
+lat_lon_EPA_site <- unique(seasonaldt[,.(Latitude,Longitude,stn)])
+
+# average lat lon to nearest grid of OMI model (.05 degree) 
+
+# use new average lat lon for searhing for nearest model grid cell
+                          
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 # Initial Plots of Data                                     ####
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -210,9 +219,22 @@ monthlydt %>% group_by(month) %>%
   geom_line()
 ggsave(paste0(fig_dir,"Ave_min_max_NO2_monthly.png"), width = 6, height = 3.5)
 
-# Load Model data 
-
+# Load OMI Model data 
 OMI_NO2 <- readMat("/Users/yshiga/Documents/Research/AURA/Data/Model_output/aura_omi_L3_no2_01_v2.mat")
+
+# Will need to find closest OMI Lat Lon for each EPA data site
+
+# First organize OMI data (remove NaNs, gather lat lon info)
+# find index of rows that are finite (not NaNs)
+rows_to_keep_index <- !rowSums(!is.finite(OMI_NO2$data.NO2.01))
+
+# expand lat lon to create grid (similar to meshgrid from Matlab)
+omi_grid_lat_lon <- expand.grid(lon = unique(OMI_NO2$lons.01),lat = unique(OMI_NO2$lats.01))
+
+# remove lat lon corresponding to data NaNs
+omi_grid_lat_lon_finite = omi_grid_lat_lon[rows_to_keep_index,]
+
+# search nearest grid cell to each EPA site
 
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~

@@ -235,7 +235,18 @@ omi_grid_lat_lon <- expand.grid(lon = unique(OMI_NO2$lons.01),lat = unique(OMI_N
 omi_grid_lat_lon_finite = omi_grid_lat_lon[rows_to_keep_index,]
 
 # search nearest grid cell to each EPA site
+lat_lon_EPA_site$ind_omi <- 0
 
+for (i in 1:nrow(lat_lon_EPA_site)){
+lat_inds<-which(abs((omi_grid_lat_lon_finite$lat-lat_lon_EPA_site$Latitude[i])) == min(abs((omi_grid_lat_lon_finite$lat-lat_lon_EPA_site$Latitude[i]))))
+
+lon_inds<-which(min(abs(omi_grid_lat_lon_finite$lon-lat_lon_EPA_site$Longitude[i])) == abs(omi_grid_lat_lon_finite$lon-lat_lon_EPA_site$Longitude[i]))
+ind_pick <- intersect(lat_inds,lon_inds)
+
+lat_lon_EPA_site$ind_omi[i] <- ind_pick
+}
+
+head(lat_lon_EPA_site)
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~

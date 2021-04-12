@@ -1,22 +1,38 @@
 %% AURA model-data comparison with NO2
 
+% Load directories and other constants
+
 fig_directory = '/Users/yshiga/Documents/Research/AURA/Figures/';
 
-load('/Users/yshiga/Documents/Research/AURA/Data/Model_output/aura_omi_L3_no2_01_v2.mat')
+model_dir = '/Users/yshiga/Documents/Research/AURA/Data/Model_output/';
 
-lat_lon_grid = meshgrid(lons_01,lats_01);
 
-lat_lon_EPA_site = readtable('/Users/yshiga/Documents/Research/AURA/Data/Model_output/lat_lon_EPA_site.csv');
+% Load model output (omi&gmi data)
 
-ll_epa = table2array(lat_lon_EPA_site(:,2:3));
+load([ model_dir 'aura_omi_L3_surf_01_v1.mat'])
+
+lat_lon_grid = meshgrid(lons_01_NH,lats_01_NH);
+
+
+% Load lat lon for EPA sites and
+
+lat_lon_EPA_site = readtable([ model_dir 'lat_lon_EPA_site.csv']);
+
+ll_epa = table2array(lat_lon_EPA_site(:,2:3));  % store lat lon in double array
+
+% Search by lat lon for index in model for each EPA site 
 
 for i = 1 : length(ll_epa)
     
-    ind_ll(i,1) = find(min(abs(ll_epa(i,1)-lats_01))==(abs(ll_epa(i,1)-lats_01)));
+    ind_ll(i,1) = find(min(abs(ll_epa(i,1)-lats_01))==(abs(ll_epa(i,1)-lats_01))); % find nearest latitude to EPA latitude
     
-    ind_ll(i,2) = find(min(abs(ll_epa(i,2)-lons_01))==(abs(ll_epa(i,2)-lons_01)));
+    ind_ll(i,2) = find(min(abs(ll_epa(i,2)-lons_01))==(abs(ll_epa(i,2)-lons_01))); % find nearest longitude to EPA longitude
     
 end
+
+[latlon, ~, inds] = unique([ind_ll(:,1), ind_ll(:,2)], 'rows', 'stable'); % Identify unique latlon location and their index for averaging later
+
+%% Find model output for corresponding lat lon points
 
 for i = 1 : length(ind_ll)
     
@@ -24,18 +40,21 @@ for i = 1 : length(ind_ll)
 
 end
 
-summer_daily_mean_all = readtable('/Users/yshiga/Documents/Research/AURA/Data/Model_output/summer_daily_mean_all.csv');
+% Load EPA NO2 summer average data from 2005-2020
 
-summer_month_mean_all = readtable('/Users/yshiga/Documents/Research/AURA/Data/Model_output/summer_month_mean_all.csv');
+summer_daily_mean_all = readtable([ model_dir 'summer_daily_mean_all.csv']);
+
+% summer_month_mean_all = readtable([model_dir 'summer_month_mean_all.csv']);
 
 
 % create matrix where rows are site and columns years from 2005 to 2020
 
-list_of_sites = unique(lat_lon_EPA_site.stn); 
+list_of_sites = unique(lat_lon_EPA_site.stn); %create list of unique station numbers
 
 all_years = sscanf(sprintf(' %s',summer_daily_mean_all.year{:}),'%f',[1,Inf]);
 
-% Loop over site
+%% Loop over sites to reorganize EPA data into matrix
+
 % Daily first
 
 % create place holder

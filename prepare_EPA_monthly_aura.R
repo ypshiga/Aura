@@ -324,7 +324,8 @@ paste("The loaded daily HAPs measurement data table has dimensions", paste(dim(d
 
 dailydt <- dailydt[(`Parameter Name` %in%  'Formaldehyde'),]
 paste("Formaldehyde measurements subset data table has dimensions", paste(dim(dailydt), collapse = ",")) 
-# pryr::object_size(dailydt) #  For HAPs (HCHO only) = 26.3  MB
+pryr::object_size(dailydt) #  For HAPs (HCHO only) = 26.3  MB
+
 
 # clean the day
 dailydt[, day := as.Date(`Date Local`)]
@@ -460,7 +461,7 @@ rm(seasonaldt_month)
 
 summer_seasonldt <-seasonaldt[which(seasonaldt$seas == 'JJA'),]
 
-summer_daily_mean_all <- summer_seasonldt[,c("stn","year","seas_mean")]
+summer_daily_mean_all <- summer_seasonldt[,c("stn","year","seas_mean","County Name","City Name","Location_Setting")]
 
 write.csv(summer_daily_mean_all,'~/Documents/Research/AURA/Data/Model_output/summer_daily_mean_all_HCHO.csv')
 
@@ -513,6 +514,20 @@ monthlydt %>% group_by(month) %>%
                group = metric, color = metric)) + labs(x='Time [month]',y='Monthly average HCHO [ppb]') +
   geom_line()
 ggsave(paste0(fig_dir,"Ave_min_max_HCHO_monthly.png"), width = 6, height = 3.5)
+
+
+## Pick out cities
+# Atlanta, Houston, Philadelphia, Nashville, NYC
+# none for Atlanta or Nashville - need to look at county level maybe
+
+sum(summer_seasonl_mon$`City Name`=="Houston")
+# 15 in houston
+
+sum(summer_seasonl_mon$`City Name`=="Philadelphia")
+# 69 in Philadelphia
+
+sum(summer_seasonl_mon$`City Name`=="New York")
+# 81 in New York
 
 ##############################
 

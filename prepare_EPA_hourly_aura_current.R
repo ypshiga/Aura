@@ -4,7 +4,7 @@
   
   # Downloaded hourly EPA data from https://aqs.epa.gov/aqsweb/airdata/download_files.html#Raw
   # I simply manually clicked on links for 2005-2020 (accessed on 1-25-21)
-  # For NO2 - not enough data for HAPS () HCHO)
+  # For NO2 - not enough data for HAPS ( HCHO)
   
   # Libraries ---------------------------------------------------------------
   suppressMessages(library(data.table))
@@ -327,7 +327,7 @@ summer_month_mean_all <- seasonal_1p5iqr__filt_JJA[,c("stn","year","Latitude","L
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 # write summer mean to csv
-write.csv(summer_month_mean_all,'~/Documents/Research/AURA/Data/Model_output/summer_hourly_mean_v5_corrected.csv')
+write.csv(summer_month_mean_all,'~/Documents/Research/AURA/Data/Model_output/summer_hourly_mean_NO2_v5_corrected.csv')
 
 # write to lat lon stn data to CSV
 lat_lon_EPA_site <- unique(summer_month_mean_all[,c("Latitude","Longitude","stn")])
@@ -336,7 +336,7 @@ lat_lon_EPA_site_temp <- summer_month_mean_all[!duplicated(summer_month_mean_all
 
 lat_lon_EPA_site_2 <- lat_lon_EPA_site_temp[,c("Latitude","Longitude","stn","County Name","Location_Setting")]
 
-write.csv(lat_lon_EPA_site_2,'~/Documents/Research/AURA/Data/Model_output/lat_lon_EPA_site_hourly_v5_corrected.csv')
+write.csv(lat_lon_EPA_site_2,'~/Documents/Research/AURA/Data/Model_output/lat_lon_EPA_site_hourly_NO2_v5_corrected.csv')
 
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~

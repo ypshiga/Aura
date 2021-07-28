@@ -186,19 +186,18 @@ summer_daily_mean_all <- summer_seasonldt[,c("stn","year","seas_mean")]
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-write.csv(summer_daily_mean_all,'~/Documents/Research/AURA/Data/Model_output/summer_daily_mean_all.csv')
-
+write.csv(summer_daily_mean_all,'~/Documents/Research/AURA/Data/Model_output/summer_daily_mean_all_NO2.csv')
 
 summer_seasonl_mon <-seasonaldt_month_unique[which(seasonaldt_month_unique$seas == 'JJA'),]
 
 summer_month_mean_all <- summer_seasonl_mon[,c("stn","year","seas_mean")]
 
-write.csv(summer_month_mean_all,'~/Documents/Research/AURA/Data/Model_output/summer_month_mean_all.csv')
+write.csv(summer_month_mean_all,'~/Documents/Research/AURA/Data/Model_output/summer_month_mean_all_NO2.csv')
 
 #create data frame of the lat lon for each unique site (stn)
 lat_lon_EPA_site <- unique(seasonaldt[,.(Latitude,Longitude,stn)])
 
-write.csv(lat_lon_EPA_site,'~/Documents/Research/AURA/Data/Model_output/lat_lon_EPA_site.csv')
+write.csv(lat_lon_EPA_site,'~/Documents/Research/AURA/Data/Model_output/lat_lon_EPA_site_NO2.csv')
 
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 # Initial Plots of Data                                     ####

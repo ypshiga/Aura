@@ -85,7 +85,7 @@ for j = 1 : 8
 end
 % Load EPA NO2 summer average data from 2005-2020
 
-summer_daily_mean_all = readtable([ model_dir 'summer_hourly_mean_v5_corrected.csv']);
+summer_daily_mean_all = readtable([ model_dir 'summer_hourly_mean_v4_corrected.csv']);
 
 % summer_month_mean_all = readtable([model_dir 'summer_month_mean_all.csv']);
 

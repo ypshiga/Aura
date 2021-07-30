@@ -50,7 +50,7 @@ lat_lon_grid = meshgrid(lons_01_NH,lats_01_NH); % create grid of lats and lons f
 
 % Load lat lon for EPA sites
 
-lat_lon_EPA_site = readtable([ model_dir 'lat_lon_EPA_site_hourly_v5_corrected.csv']);
+lat_lon_EPA_site = readtable([ model_dir 'lat_lon_EPA_site_hourly_NO2_v5_corrected.csv']);
 
 ll_epa = table2array(lat_lon_EPA_site(:,2:3));  % store lat lon in double array
 
@@ -85,7 +85,7 @@ for j = 1 : 8
 end
 % Load EPA NO2 summer average data from 2005-2020
 
-summer_daily_mean_all = readtable([ model_dir 'summer_hourly_mean_v5_corrected.csv']);
+summer_daily_mean_all = readtable([ model_dir 'summer_hourly_mean_NO2_v5_corrected.csv']);
 
 % summer_month_mean_all = readtable([model_dir 'summer_month_mean_all.csv']);
 

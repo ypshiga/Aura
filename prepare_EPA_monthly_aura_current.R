@@ -22,9 +22,18 @@ library(R.matlab)
 library(sp)
 library(rgeos)
 
-fig_dir = '/Users/yshiga/Documents/Research/AURA/Figures/'
-
+# where daily data is located 
 data_dir = "~/Documents/Research/AURA/Data/Daily/NO2"
+
+
+# where model (correction data) is located 
+mod_dir = "~/Documents/Research/AURA/Data/Model_output/"
+
+# where csv output will be saved  
+output_dir = "~/Documents/Research/AURA/Data/Model_output/" 
+
+# where figures will be saved
+fig_dir = '/Users/yshiga/Documents/Research/AURA/Figures/'
 
 # Open Measurement Daily Data ---------------------------------------------
 
@@ -175,6 +184,7 @@ summer_seasonldt <-seasonaldt[which(seasonaldt$seas == 'JJA'),]
 
 summer_daily_mean_all <- summer_seasonldt[,c("stn","year","seas_mean")]
 
+summer_daily_mean_all_lat_lon <- summer_seasonldt[,c("stn","year","seas_mean","Latitude","Longitude")]
 
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -185,19 +195,34 @@ summer_daily_mean_all <- summer_seasonldt[,c("stn","year","seas_mean")]
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+file_name_temp = paste(output_dir,'summer_daily_mean_all_NO2.csv',sep='')
 
-write.csv(summer_daily_mean_all,'~/Documents/Research/AURA/Data/Model_output/summer_daily_mean_all_NO2.csv')
+write.csv(summer_daily_mean_all,file_name_temp)
+
+file_name_temp = paste(output_dir,'summer_daily_mean_all_NO2_w_lat_lon.csv',sep='')
+
+write.csv(summer_daily_mean_all_lat_lon,file_name_temp)
 
 summer_seasonl_mon <-seasonaldt_month_unique[which(seasonaldt_month_unique$seas == 'JJA'),]
 
 summer_month_mean_all <- summer_seasonl_mon[,c("stn","year","seas_mean")]
 
-write.csv(summer_month_mean_all,'~/Documents/Research/AURA/Data/Model_output/summer_month_mean_all_NO2.csv')
+summer_month_mean_all_lat_lon <- summer_seasonl_mon[,c("stn","year","seas_mean","Latitude","Longitude")]
+
+file_name_temp = paste(output_dir,'summer_month_mean_all_NO2.csv',sep='')
+
+write.csv(summer_month_mean_all,file_name_temp)
+
+file_name_temp = paste(output_dir,'summer_month_mean_all_NO2_w_lat_lon.csv',sep='')
+
+write.csv(summer_month_mean_all_lat_lon,file_name_temp)
 
 #create data frame of the lat lon for each unique site (stn)
 lat_lon_EPA_site <- unique(seasonaldt[,.(Latitude,Longitude,stn)])
 
-write.csv(lat_lon_EPA_site,'~/Documents/Research/AURA/Data/Model_output/lat_lon_EPA_site_NO2.csv')
+file_name_temp = paste(output_dir,'lat_lon_EPA_site_NO2.csv',sep='')
+
+write.csv(lat_lon_EPA_site,file_name_temp)
 
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 # Initial Plots of Data                                     ####
@@ -235,7 +260,8 @@ ggsave(paste0(fig_dir,"Ave_min_max_NO2_monthly.png"), width = 6, height = 3.5)
 
 # Load OMI Model data 
 #OMI_NO2 <- readMat("/Users/yshiga/Documents/Research/AURA/Data/Model_output/aura_omi_L3_no2_01_v2.mat")
-OMI_NO2_EPA <- readMat("/Users/yshiga/Documents/Research/AURA/Data/Model_output/data_EPA.mat")
+
+OMI_NO2_EPA <- readMat(paste0(mod_dir,"data_EPA.mat"))
 
 # Will need to find closest OMI Lat Lon for each EPA data site
 
@@ -344,7 +370,7 @@ dailydt[, stn := paste0(
   stringr::str_pad(`Site Num`, 4, "left", pad = "0"))]  # four digits site
 
 # Open site description file
-sites <- fread("~/Documents/Research/AURA/Data/Daily/aqs_sites.csv")
+sites <- fread(paste0(data_dir,"aqs_sites.csv"))
 
 # In site table, create a unique station identifier with uniform length
 sites[, stn := paste0(
@@ -446,6 +472,8 @@ summer_seasonldt <-seasonaldt[which(seasonaldt$seas == 'JJA'),]
 
 summer_daily_mean_all <- summer_seasonldt[,c("stn","year","seas_mean","County Name","City Name","Location_Setting")]
 
+summer_daily_mean_all_lat_lon <- summer_seasonldt[,c("stn","year","seas_mean","County Name","City Name","Location_Setting","Latitude","Longitude")]
+
 
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -457,19 +485,25 @@ summer_daily_mean_all <- summer_seasonldt[,c("stn","year","seas_mean","County Na
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-write.csv(summer_daily_mean_all,'~/Documents/Research/AURA/Data/Model_output/summer_daily_mean_all_HCHO.csv')
+write.csv(summer_daily_mean_all,paste0(output_dir,'summer_daily_mean_all_HCHO.csv'))
 
+write.csv(summer_daily_mean_all_lat_lon,paste0(output_dir,'summer_daily_mean_all_HCHO_lat_lon.csv'))
 
 summer_seasonl_mon <-seasonaldt_month_unique[which(seasonaldt_month_unique$seas == 'JJA'),]
+
 summer_month_mean_all <- summer_seasonl_mon[,c("stn","year","seas_mean")]
 
-write.csv(summer_month_mean_all,'~/Documents/Research/AURA/Data/Model_output/summer_month_mean_all_HCHO.csv')
+write.csv(summer_month_mean_all,paste0(output_dir,'summer_month_mean_all_HCHO.csv'))
+
+summer_month_mean_all_lat_lon <- summer_seasonl_mon[,c("stn","year","seas_mean","Latitude","Longitude")]
+
+write.csv(summer_month_mean_all_lat_lon,paste0(output_dir,'summer_month_mean_all_HCHO_lat_lon.csv'))
 
 #create data frame of the lat lon for each unique site (stn)
 lat_lon_EPA_site <- unique(seasonaldt[,.(Latitude,Longitude,stn)])
 
 
-write.csv(lat_lon_EPA_site,'~/Documents/Research/AURA/Data/Model_output/lat_lon_EPA_site_HCHO.csv')
+write.csv(lat_lon_EPA_site,paste0(output_dir,'lat_lon_EPA_site_HCHO.csv'))
 
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 # Initial Plots of Data                                     ####

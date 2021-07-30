@@ -25,6 +25,12 @@
   
   data_dir = "~/Documents/Research/AURA/Data/Hourly/NO2/"
   
+  # where model (correction data) is located 
+  mod_dir = "~/Documents/Research/AURA/Data/Model_output/"
+  
+  # where csv output will be saved  
+  output_dir = "~/Documents/Research/AURA/Data/Model_output/" 
+  
   # Open Measurement Daily Data ---------------------------------------------
   
   # Hourly
@@ -90,7 +96,7 @@ hourlydt[, stn := paste0(
   stringr::str_pad(`Site Num`, 4, "left", pad = "0"))]  # four digits site
 
 # Open site description file
-sites <- fread("~/Documents/Research/AURA/Data/Daily/aqs_sites.csv")
+sites <- fread(paste0(data_dir,"aqs_sites.csv"))
 
 # In site table, create a unique station identifier with uniform length
 sites[, stn := paste0(
@@ -227,7 +233,7 @@ rm(hourlydt_1p5iqr_filt) # clear old variables
 monthlydt_1p5iqr__filt<-data.table(monthlydt_1p5iqr__filt)
 # Add correction HERE
 # load data
-correction <- readMat('/Users/yshiga/Documents/Research/AURA/Data/Model_output/aura_no2_insitu_correction_v1.mat')
+correction <- readMat(paste0(mod_dir,'aura_no2_insitu_correction_v1.mat'))
 
 # lat lon temp variable for each unique stn
 lat_lon_EPA_site_temp <- monthlydt_1p5iqr__filt[!duplicated(monthlydt_1p5iqr__filt[,c("stn")])]

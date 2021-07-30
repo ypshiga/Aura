@@ -1417,17 +1417,8 @@ for i = 1 : length(ind_ll_city)+1
         for j = 1 : length(vals_temp)
     
             setting_type_hcho{i,j} = unique(summer_daily_mean_all_HCHO.Location_Setting(OBS_LL_HCHO(ind_ll_city{i}(j),4)==str2double(summer_daily_mean_all_HCHO.stn)));
-            if ~isempty(setting_type_hcho{i,j})
 
-                is_rural(i,j) = strcmp(setting_type_hcho{i,j}{:},'RURAL');
-                
-            else
-                
-                is_rural(i,j)=0;
-                
-            end
         end
-    ind_ll_city{i} = ind_ll_city{i}(~is_rural(i,1:length(ind_ll_city{i})));
     % Time series stats for all and URBAN only 
     n_obs_hcho(i,:) = sum(~isnan(OBS_HCHO(ind_ll_city{i},:)));
     
@@ -1951,6 +1942,7 @@ end
 close all
 
 %% plot for PAPER/report NO2 and HCHO comparisons to EPA data (USING OMI)
+clear ind_3yr ind_for_all
 
 % check 15 average criteria
 p=1;
@@ -2435,6 +2427,7 @@ print([fig_directory 'Fig_report_1b_orig'],'-dpng') % save as png
 print(gcf,'-dtiff','-r300', [fig_directory 'Fig_report_1b_orig']);
 
 %% plot for PAPER/report OMI NO2 and HCHO comparisons to EPA data (USING GMI)
+clear ind_3yr ind_for_all
 
 % check 15 average criteria
 p=1;
